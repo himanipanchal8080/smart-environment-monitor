@@ -1,14 +1,15 @@
 from flask import Flask, render_template, request, redirect, url_for
 import requests
+import os
 
 app = Flask(__name__)
 
-# ---------------- TEMP STORAGE (instead of MySQL) ---------------- #
+# ---------------- TEMP STORAGE ---------------- #
 data_storage = []
 record_id = 1
 
 # ---------------- API ---------------- #
-API_KEY = "31df7b8e7bc1c3fec4edad8efaeecba8"   # ⚠️ Put your OpenWeather API key
+API_KEY = "31df7b8e7bc1c3fec4edad8efaeecba8"
 
 def fetch_city_data(city):
     try:
@@ -16,11 +17,14 @@ def fetch_city_data(city):
             f"http://api.openweathermap.org/geo/1.0/direct?q={city}&limit=1&appid={API_KEY}"
         ).json()
 
-        if not geo:
+        if not geo or len(geo) == 0:
             return None
 
-        lat = geo[0]["lat"]
-        lon = geo[0]["lon"]
+        lat = geo[0].get("lat")
+        lon = geo[0].get("lon")
+
+        if lat is None or lon is None:
+            return None
 
         weather = requests.get(
             f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={API_KEY}&units=metric"
@@ -30,13 +34,23 @@ def fetch_city_data(city):
             f"http://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={lon}&appid={API_KEY}"
         ).json()
 
+        # SAFE CHECKS (IMPORTANT)
+        if "main" not in weather:
+            print("Weather API error:", weather)
+            return None
+
+        if "list" not in air or len(air["list"]) == 0:
+            print("Air API error:", air)
+            return None
+
         return {
-            "temperature": weather["main"]["temp"],
-            "humidity": weather["main"]["humidity"],
-            "aqi": air["list"][0]["main"]["aqi"] * 50
+            "temperature": weather["main"].get("temp", 0),
+            "humidity": weather["main"].get("humidity", 0),
+            "aqi": air["list"][0]["main"].get("aqi", 1) * 50
         }
 
-    except:
+    except Exception as e:
+        print("ERROR:", e)
         return None
 
 
@@ -61,7 +75,7 @@ def predict_risk(aqi, temp, humidity):
             "solutions": [
                 "Avoid outdoor exercise",
                 "Drink plenty of water",
-                "Keep windows closed during pollution hours"
+                "Keep windows closed"
             ]
         })
     else:
@@ -112,7 +126,7 @@ def predict_risk(aqi, temp, humidity):
             "parameter": "Humidity",
             "level": "🔴 High Humidity",
             "justification": "High humidity discomfort.",
-            "solutions": ["Use ventilation", "Avoid drying clothes indoors"]
+            "solutions": ["Use ventilation"]
         })
 
     return risks
@@ -129,11 +143,15 @@ def index():
 def add():
     global record_id
 
-    city = request.form["city"]
+    city = request.form.get("city")
+
+    if not city:
+        return "Please enter a city!"
+
     data = fetch_city_data(city)
 
     if not data:
-        return "City not found!"
+        return "City not found or API error!"
 
     data_storage.append({
         "id": record_id,
@@ -159,11 +177,14 @@ def delete(id):
 def edit(id):
     record = next((d for d in data_storage if d["id"] == id), None)
 
+    if not record:
+        return "Record not found!"
+
     if request.method == "POST":
-        record["area"] = request.form["city"]
-        record["air_quality_index"] = int(request.form["aqi"])
-        record["temperature"] = float(request.form["temp"])
-        record["humidity"] = float(request.form["humidity"])
+        record["area"] = request.form.get("city")
+        record["air_quality_index"] = int(request.form.get("aqi", 0))
+        record["temperature"] = float(request.form.get("temp", 0))
+        record["humidity"] = float(request.form.get("humidity", 0))
         return redirect(url_for("index"))
 
     return render_template("edit.html", record=record)
@@ -213,7 +234,6 @@ def prediction():
 
 
 # ---------------- RUN ---------------- #
-import os
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
