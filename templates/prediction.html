@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Health Risk Prediction</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<h2>🩺 Health Risk Prediction</h2>
+
+{% for record in all_data %}
+
+<div class="card">
+
+    <h2>{{ record.city }}</h2>
+    <p><strong>AQI:</strong> {{ record.aqi }}</p>
+    <p><strong>Temperature:</strong> {{ record.temp }} °C</p>
+    <p><strong>Humidity:</strong> {{ record.humidity }} %</p>
+
+    <!-- 🔴 RISK BOX -->
+    <div class="risk-box">
+        <h3>⚠ Risk Summary</h3>
+        <ul>
+            {% for r in record.risks %}
+                <li><strong>{{ r.parameter }}</strong> - {{ r.level }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- 🟢 JUSTIFICATION BOX -->
+    <div class="justification-box">
+        <h3>📌 Justification</h3>
+        <ul>
+            {% for r in record.risks %}
+                <li>{{ r.justification }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- 🟢 REMEDY BOX (No Repeat Word) -->
+    <div class="remedy-box">
+        <h3>💡 Recommended Solutions</h3>
+        <ul>
+            {% for r in record.risks %}
+                {% for sol in r.solutions %}
+                    <li>{{ sol }}</li>
+                {% endfor %}
+            {% endfor %}
+        </ul>
+    </div>
+
+</div>
+
+{% endfor %}
+
+</body>
+</html>

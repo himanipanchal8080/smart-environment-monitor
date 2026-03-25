@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Edit</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<h2>Edit Record</h2>
+
+<form method="POST">
+<input type="text" name="city" value="{{ record.area }}" required>
+<input type="number" name="aqi" value="{{ record.air_quality_index }}" required>
+<input type="number" name="temp" value="{{ record.temperature }}" required>
+<input type="number" name="humidity" value="{{ record.humidity }}" required>
+<button type="submit">Update</button>
+</form>
+
+</body>
+</html>

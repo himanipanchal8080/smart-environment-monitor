@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Smart Environmental Monitoring</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<h1>🌍 Smart Environmental Monitoring</h1>
+
+<!-- ADD CITY FORM -->
+<form action="/add" method="post">
+<input type="text" name="city" placeholder="Enter City" required>
+<button type="submit">Fetch Data</button>
+</form>
+
+<table>
+<tr>
+<th>City</th>
+<th>AQI</th>
+<th>Temp</th>
+<th>Humidity</th>
+<th>Date</th>
+<th>Action</th>
+</tr>
+
+{% for row in data %}
+<tr>
+<td>{{ row.area }}</td>
+<td>{{ row.air_quality_index }}</td>
+<td>{{ row.temperature }}</td>
+<td>{{ row.humidity }}</td>
+<td>{{ row.created_at.strftime('%Y-%m-%d') }}</td>
+<td>
+<a href="/edit/{{ row.id }}">Edit</a> |
+<a href="/delete/{{ row.id }}" onclick="return confirm('Delete?')">Delete</a>
+</td>
+</tr>
+{% endfor %}
+
+</table>
+
+<div class="nav">
+<a href="/dashboard">Dashboard</a>
+<a href="/prediction">Prediction</a>
+</div>
+
+</body>
+</html>

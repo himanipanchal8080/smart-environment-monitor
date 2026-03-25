@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+<style>
+/* ✅ Added Styling */
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.back-btn {
+    padding: 8px 15px;
+    background: #333;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+}
+
+.section {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f5f5f5;
+    border-radius: 10px;
+}
+
+</style>
+
+</head>
+<body>
+
+<!-- ✅ BACK BUTTON + TITLE -->
+<div class="top-bar">
+    <h2>📊 Environmental Dashboard</h2>
+    <a href="/" class="back-btn">⬅ Back to Home</a>
+</div>
+
+<!-- ✅ CITY-WISE TREND ANALYSIS --> <div class="section"> <h3>📊 City-wise Trend Analysis</h3> <ul id="city-trends"></ul>
+
+<!-- ✅ 6. MINI MAP / CITY DISPLAY -->
+<div class="section">
+    <h3>📍 Monitored Cities</h3>
+    <ul id="city-list"></ul>
+</div>
+
+<!-- EXISTING CHART (UNCHANGED) -->
+<canvas id="chart"></canvas>
+
+<script>
+const labels = {{ data | map(attribute='created_at') | list | tojson }};
+const cities = {{ data | map(attribute='area') | list | tojson }};
+const aqi = {{ data | map(attribute='air_quality_index') | list | tojson }};
+const temp = {{ data | map(attribute='temperature') | list | tojson }};
+const humidity = {{ data | map(attribute='humidity') | list | tojson }};
+
+// Combine date + city for better labels
+const combinedLabels = labels.map((label, index) => {
+    return cities[index] + " (" + new Date(label).toLocaleTimeString() + ")";
+});
+
+
+// ✅ CITY-WISE TREND ANALYSIS
+
+function getCityTrends() {
+    let cityData = {};
+
+    // Group data by city
+    for (let i = 0; i < cities.length; i++) {
+        let city = cities[i];
+
+        if (!cityData[city]) {
+            cityData[city] = {
+                aqi: [],
+                temp: [],
+                humidity: []
+            };
+        }
+
+        cityData[city].aqi.push(aqi[i]);
+        cityData[city].temp.push(temp[i]);
+        cityData[city].humidity.push(humidity[i]);
+    }
+
+    return cityData;
+}
+
+function getTrendSymbol(arr) {
+    if (arr.length < 2) return "➡";
+
+    let last = arr[arr.length - 1];
+    let prev = arr[arr.length - 2];
+
+    if (last > prev) return "⬆";
+    else if (last < prev) return "⬇";
+    else return "➡";
+}
+
+let cityTrendData = getCityTrends();
+let trendList = document.getElementById("city-trends");
+
+// Display trends
+for (let city in cityTrendData) {
+    let aqiTrend = getTrendSymbol(cityTrendData[city].aqi);
+    let tempTrend = getTrendSymbol(cityTrendData[city].temp);
+    let humidityTrend = getTrendSymbol(cityTrendData[city].humidity);
+
+    let li = document.createElement("li");
+    li.innerText = `📍 ${city} → AQI ${aqiTrend}, Temp ${tempTrend}, Humidity ${humidityTrend}`;
+    trendList.appendChild(li);
+}
+
+// ✅ CITY LIST (MINI MAP STYLE)
+let uniqueCities = [...new Set(cities)];
+let cityList = document.getElementById("city-list");
+
+uniqueCities.forEach(city => {
+    let li = document.createElement("li");
+    li.innerText = "📍 " + city;
+    cityList.appendChild(li);
+});
+
+new Chart(document.getElementById("chart"), {
+    type: "line",
+    data: {
+        labels: combinedLabels,
+        datasets: [
+            {
+                label: "AQI",
+                data: aqi,
+                borderColor: "red",
+                fill: false
+            },
+            {
+                label: "Temperature",
+                data: temp,
+                borderColor: "orange",
+                fill: false
+            },
+            {
+                label: "Humidity",
+                data: humidity,
+                borderColor: "blue",
+                fill: false
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    title: function(context) {
+                        let index = context[0].dataIndex;
+                        return "City: " + cities[index];
+                    },
+                    label: function(context) {
+                        return context.dataset.label + ": " + context.raw;
+                    }
+                }
+            }
+        }
+    }
+});
+</script>
+
+</body>
+</html>
